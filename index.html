@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AmIBougie?</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #fafafa;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .container {
+    max-width: 600px;
+    width: 100%;
+    padding: 40px 24px;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%;
+    height: 4px;
+    background: #e5e5e5;
+    border-radius: 2px;
+    margin-bottom: 40px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: #1a1a1a;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* Counter */
+  .counter {
+    font-size: 13px;
+    color: #999;
+    letter-spacing: 0.05em;
+    margin-bottom: 24px;
+    display: none;
+  }
+
+  /* Intro screen */
+  .intro { text-align: center; }
+  .intro h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  .intro p {
+    font-size: 17px;
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Question */
+  .question-text {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 28px;
+  }
+
+  /* Answer buttons */
+  .answers { display: flex; flex-direction: column; gap: 10px; }
+  .answer-btn {
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #1a1a1a;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+  .answer-btn:hover {
+    border-color: #999;
+    background: #f5f5f5;
+  }
+  .answer-btn.selected {
+    border-color: #1a1a1a;
+    background: #f0f0f0;
+  }
+
+  /* Scale buttons */
+  .scale-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .scale-btn {
+    flex: 1;
+    aspect-ratio: 1;
+    max-width: 64px;
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .scale-btn:hover {
+    border-color: #999;
+    background: #f5f5f5;
+  }
+  .scale-btn.selected {
+    border-color: #1a1a1a;
+    background: #f0f0f0;
+  }
+  .scale-labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .scale-label {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.4;
+    max-width: 45%;
+  }
+  .scale-label.right { text-align: right; }
+
+  /* Yes/No buttons */
+  .yn-row {
+    display: flex;
+    gap: 10px;
+  }
+  .yn-btn {
+    flex: 1;
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+  .yn-btn:hover {
+    border-color: #999;
+    background: #f5f5f5;
+  }
+  .yn-btn.selected {
+    border-color: #1a1a1a;
+    background: #f0f0f0;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  /* Loading */
+  .loading {
+    text-align: center;
+    display: none;
+  }
+  .loading p {
+    font-size: 17px;
+    color: #666;
+    margin-bottom: 24px;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e5e5;
+    border-top-color: #1a1a1a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Results */
+  .results { display: none; text-align: center; }
+  .results-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 40px 32px 32px;
+    margin-bottom: 24px;
+  }
+  .tier-name {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 12px;
+  }
+  .score {
+    font-size: 96px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 4px;
+    color: #2563eb;
+  }
+  .score-label {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 12px;
+  }
+  .tier-tagline {
+    font-size: 17px;
+    color: #555;
+    font-style: italic;
+    margin-bottom: 0;
+    line-height: 1.5;
+  }
+  .roast {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #333;
+    text-align: left;
+    background: #f9fafb;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .results-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .retake-btn, .answers-btn {
+    background: none;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-size: 15px;
+    color: #666;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .retake-btn:hover, .answers-btn:hover {
+    border-color: #999;
+    color: #1a1a1a;
+  }
+  .answers-review {
+    display: none;
+    text-align: left;
+    margin-top: 8px;
+  }
+  .answers-review h3 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .answer-item {
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .answer-item:last-child { border-bottom: none; }
+  .answer-item .aq {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+  .answer-item .aa {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  /* Error */
+  .error {
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 16px;
+    color: #b91c1c;
+    font-size: 14px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  /* Fade transitions */
+  .fade-in {
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="counter" id="counter"></div>
+
+  <!-- Intro -->
+  <div class="intro" id="intro">
+    <h1>AmIBougie?</h1>
+    <p>20 quick questions about your preferences, habits, and opinions. At the end, you'll get a score from 0 to 100 and a personalized assessment. There are no wrong answers.</p>
+    <button class="btn-primary" onclick="startQuiz()">Let's Go</button>
+  </div>
+
+  <!-- Question area -->
+  <div id="questionArea" style="display:none;"></div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <p>Calculating your results...</p>
+    <div class="spinner"></div>
+    <div class="error" id="error"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="results-card">
+      <div class="tier-name" id="tierName"></div>
+      <div class="score" id="scoreNum"></div>
+      <div class="score-label">out of 100</div>
+      <div class="tier-tagline" id="tierTagline"></div>
+    </div>
+    <div class="roast" id="roast"></div>
+    <div class="results-actions">
+      <button class="retake-btn" onclick="retake()">Take It Again</button>
+      <button class="answers-btn" onclick="toggleAnswers()">See My Answers</button>
+    </div>
+    <div class="answers-review" id="answersReview"></div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// CONFIG — Replace with your Cloudflare Worker URL
+// ============================================================
+const WORKER_URL = 'https://amibougieproxy.jdonelson.workers.dev'; // e.g. https://amibougie-proxy.your-subdomain.workers.dev
+const MODEL = 'claude-sonnet-4-6';
+
+// ============================================================
+// QUESTION BANK (100 questions)
+// ============================================================
+const QUESTIONS = [
+  // --- Food & Drink ---
+  {id:1, cat:"Food & Drink", type:"YN", text:"Have you ever sent back a bottle of wine at a restaurant?"},
+  {id:2, cat:"Food & Drink", type:"SCALE", text:"When ordering a mixed drink at a bar, how often do you specify the brand of liquor?", low:"Never, whatever's in the well is fine", high:"Every single time, and I have opinions about it"},
+  {id:3, cat:"Food & Drink", type:"MC", text:"What's your go-to weekend morning coffee situation?", options:["I grind my own beans and have a whole setup","Keurig or Nespresso pod — it's easy and consistent","Whatever drip coffee I make at home","I'm picking it up — I have a place"]},
+  {id:4, cat:"Food & Drink", type:"YN", text:"Do you have a preferred sparkling water brand?"},
+  {id:5, cat:"Food & Drink", type:"SCALE", text:"How would you rate your feelings about H-E-B's store-brand products versus name brands?", low:"H-E-B brand is just as good, I buy it for almost everything", high:"I appreciate H-E-B, but for most things I want the specific brand I like"},
+  {id:6, cat:"Food & Drink", type:"MC", text:"You're hosting a casual backyard dinner for 8 people. Where are you sourcing the food?", options:["H-E-B, all of it — they have everything I need","I'm having it catered or picking up from a restaurant I trust","Central Market or Whole Foods for the main stuff, H-E-B for basics","A few different spots — there's a butcher I like, a cheese place, a bakery"]},
+  {id:7, cat:"Food & Drink", type:"SCALE", text:"How likely are you to order a charcuterie board when it's on a menu?", low:"Never, just give me the queso", high:"Almost always — I want to see what they've got"},
+  {id:8, cat:"Food & Drink", type:"YN", text:'Have you ever described a grocery store as "your happy place"?'},
+  {id:9, cat:"Food & Drink", type:"MC", text:"You're at a restaurant and they don't have your usual bourbon. What do you do?", options:["Order whatever bourbon they have — it's fine","Switch to beer or wine, no big deal","Ask what they do have and pick the closest thing","Just get a beer — I'd rather skip it than settle"]},
+  {id:10, cat:"Food & Drink", type:"SCALE", text:"How much thought do you put into which olive oil you buy?", low:"I grab whatever's on the shelf", high:"I have a specific one I buy and I'd notice if it changed"},
+  {id:11, cat:"Food & Drink", type:"YN", text:"Have you ever waited in line for a restaurant that doesn't take reservations, when another similar restaurant nearby had open tables?"},
+  {id:12, cat:"Food & Drink", type:"MC", text:"When someone brings a bottle of wine to your house, what happens to it?", options:["We open it that night, whatever it is","Depends — if it's good we drink it, if not it goes in the rack for cooking or re-gifting","I'll save it for the right occasion if it's a nice bottle","I open it to be polite but I usually already have something picked out for the evening"]},
+
+  // --- Fashion & Style ---
+  {id:13, cat:"Fashion & Style", type:"MC", text:"Where do you buy most of your everyday casual clothes?", options:["I don't really think about it — I wear what I have until it wears out","Target, Costco, Amazon — whatever's easy","I have a few brands I stick with and I'll wait for their sales","I shop at specific stores because I know what fits me and what I like"]},
+  {id:14, cat:"Fashion & Style", type:"YN", text:"Have you ever spent more than $30 on a single pair of socks?"},
+  {id:15, cat:"Fashion & Style", type:"SCALE", text:"How do you feel about wearing clothes with visible brand logos?", low:"Don't care either way, never think about it", high:"I have a strong opinion on this (either for or against)"},
+  {id:16, cat:"Fashion & Style", type:"MC", text:"If you needed a new pair of sunglasses tomorrow, where would you go?", options:["Amazon — I'd find something decent for $20–40","I have a brand I like and I'd just reorder","Grab a pair at a gas station or Target — they all work","I'd go try some on in person — fit and look matter to me"]},
+  {id:17, cat:"Fashion & Style", type:"YN", text:"Do you own anything from Restoration Hardware (RH)?"},
+  {id:18, cat:"Fashion & Style", type:"SCALE", text:"When you're shopping for a gift for someone, how important is the packaging and presentation?", low:"I hand them the Amazon box it came in", high:"The bag, the tissue paper, the ribbon — presentation matters"},
+  {id:19, cat:"Fashion & Style", type:"MC", text:"What's your relationship with Kohl's?", options:["I shop there regularly — good deals, solid basics","I'll go for specific things but it's not my first choice","I haven't been in years","I'd rather not"]},
+  {id:20, cat:"Fashion & Style", type:"YN", text:"Have you ever had clothes tailored that weren't a suit? (Jeans hemmed, casual shirts taken in, etc.)"},
+  {id:21, cat:"Fashion & Style", type:"MC", text:"How do you feel about thrift stores and consignment shops?", options:["I shop them regularly — you can find great stuff","I'd go for something specific, like furniture or vintage finds","Not really my thing, but no judgment","I've never thought about it"]},
+  {id:22, cat:"Fashion & Style", type:"SCALE", text:'How many pairs of shoes do you own that you\'d describe as "for a specific purpose"?', low:"Two or three, max", high:"I've lost count — different situations call for different shoes"},
+
+  // --- Golf (Specific) ---
+  {id:23, cat:"Golf (Specific)", type:"MC", text:"What brand is your current golf bag?", options:["Whatever came with my set or something basic","A solid mid-range brand — Ping, Callaway, TaylorMade","I researched it and picked something specific — Vessel, Stitch, Jones, Sun Mountain","I have more than one bag for different situations"]},
+  {id:24, cat:"Golf (Specific)", type:"SCALE", text:"How would you rate Malbon Golf's clothing?", low:"Not for me — overpriced for what it is", high:"I think they've done something genuinely cool for golf fashion"},
+  {id:25, cat:"Golf (Specific)", type:"YN", text:"Have you ever purchased anything from a golf influencer's brand or collaboration? (Malbon, Eastside Golf, Metalwood Studio, Good Good merch, etc.)"},
+  {id:26, cat:"Golf (Specific)", type:"MC", text:"How do you track your distances on the course?", options:["Course markers and yardage books","A GPS app on my phone","A dedicated GPS watch","Rangefinder"]},
+  {id:27, cat:"Golf (Specific)", type:"SCALE", text:"How often do you match your golf outfit before a round?", low:"I just grab whatever's clean", high:"Belt matches the shoes, hat coordinates with the polo — I think about it"},
+
+  // --- Golf-Adjacent ---
+  {id:28, cat:"Golf-Adjacent", type:"YN", text:"Do you follow any golf content creators on YouTube or Instagram? (Good Good, Rick Shiels, Bob Does Sports, etc.)"},
+  {id:29, cat:"Golf-Adjacent", type:"MC", text:"What do you drink on the course?", options:["Water — I'm here to play","Whatever beer they have on the cart","I bring my own — I have preferences","If they don't have what I want, I'll just drink water"]},
+  {id:30, cat:"Golf-Adjacent", type:"SCALE", text:"How important is the quality of the course's halfway house or on-course food?", low:"I'm there to play golf, I'll eat a hot dog and be fine", high:"A good turn is part of the experience — I notice when it's done well"},
+  {id:31, cat:"Golf-Adjacent", type:"MC", text:"When playing a new course, how did you probably hear about it?", options:["A buddy suggested it or it was just nearby","I saw it on a 'best courses' list or golf media","Someone in my group has connections and got us on","I follow course review accounts and have a running list of places I want to play"]},
+  {id:32, cat:"Golf-Adjacent", type:"YN", text:"Have you ever traveled specifically to play a golf course — not a golf trip, but a trip built around one particular course?"},
+
+  // --- Home & Living ---
+  {id:33, cat:"Home & Living", type:"MC", text:"What's your candle situation at home?", options:["I don't really do candles","Whatever's at Target or the grocery store","I have a brand or a local maker I like","Bath & Body Works or Yankee Candle — they're reliable"]},
+  {id:34, cat:"Home & Living", type:"SCALE", text:"How would you describe your relationship with throw pillows?", low:"I have whatever came with the couch", high:"I have seasonal throw pillows and I'm not ashamed"},
+  {id:35, cat:"Home & Living", type:"YN", text:"Have you ever hired someone to help you pick paint colors for your house?"},
+  {id:36, cat:"Home & Living", type:"MC", text:"What's your lawn care situation?", options:["I mow it myself when it needs it","I have a lawn service for mowing and edging","Full service — mowing, fertilization, seasonal treatments, the works","I mow it myself but I'm particular about it — I have specific products and a routine"]},
+  {id:37, cat:"Home & Living", type:"SCALE", text:"How do you feel about smart home devices?", low:"I have a smart speaker or thermostat, maybe both", high:"I have a whole ecosystem — lighting scenes, automated routines, the works"},
+  {id:38, cat:"Home & Living", type:"YN", text:"Is your refrigerator a counter-depth model?"},
+  {id:39, cat:"Home & Living", type:"MC", text:"When something breaks in your house — a leaky faucet, a wobbly shelf — what's your first move?", options:["YouTube it and fix it myself","Call a handyman I've used before","Ask a friend or neighbor who's handy","Call a specific person for a specific thing — I have a plumber, an electrician, a guy for the house"]},
+  {id:40, cat:"Home & Living", type:"SCALE", text:"How much do you care about what your bathroom hand towels look like?", low:"They're towels — they dry hands", high:"They match, they're good quality, and guests notice them"},
+  {id:41, cat:"Home & Living", type:"YN", text:"Do you have a dedicated space in your home for something most people wouldn't? (Wine storage, a coffee bar, a cocktail cart, a reading nook, etc.)"},
+
+  // --- Travel ---
+  {id:42, cat:"Travel", type:"MC", text:"How do you typically book a vacation?", options:["Find a deal online and figure it out as I go","Research it myself — I'm thorough, I read reviews, I plan it out","I use a travel advisor or concierge service","I usually just go wherever friends or family are going"]},
+  {id:43, cat:"Travel", type:"SCALE", text:"How do you feel about hotel loyalty programs?", low:"I don't have one or never think about it", high:"I have status, I know my tier, and I've made decisions to protect it"},
+  {id:44, cat:"Travel", type:"YN", text:"Do you have TSA PreCheck or Global Entry?"},
+  {id:45, cat:"Travel", type:"MC", text:"You're flying somewhere for a long weekend. What's the bag situation?", options:["Backpack or duffel — whatever fits","I check a bag because I don't want to deal with overhead bin drama","I have a carry-on I like — I know exactly what fits and how to pack it","I have a luggage set and I travel with specific pieces depending on the trip"]},
+  {id:46, cat:"Travel", type:"SCALE", text:"When you walk into a hotel room, what's the first thing you notice?", low:"Whether the bed looks clean and the A/C works", high:"The linens, the bathroom products, the lighting — I'm taking it all in"},
+  {id:47, cat:"Travel", type:"MC", text:"You arrive at your vacation rental and realize the kitchen is poorly stocked — dull knives, cheap pans, no decent coffee setup. How do you react?", options:["Doesn't bother me — I'm not here to cook","I'll make do with what's there","I'll pick up a few things at a local store to get by","This would genuinely affect my enjoyment of the trip"]},
+  {id:48, cat:"Travel", type:"YN", text:"Have you ever left a detailed review of a hotel or Airbnb?"},
+  {id:49, cat:"Travel", type:"SCALE", text:"How much does the airport lounge matter to you?", low:"I've never been in one or don't think about it", high:"I have lounge access and I plan my arrival time around using it"},
+  {id:50, cat:"Travel", type:"MC", text:"You're planning a ski trip. Where are you going?", options:["Wherever has the best deal — lift tickets and lodging bundled","A place I've been before that I know I like","Somewhere I've been researching — the mountain and the town both matter","I don't ski / N/A"]},
+
+  // --- Social & Entertainment ---
+  {id:51, cat:"Social & Entertainment", type:"MC", text:"It's Saturday night and you're going out. What kind of place are you headed to?", options:["Wherever my friends are — I don't care about the venue","A sports bar or pub — somewhere comfortable and casual","A place I've been wanting to try — I saw it on Instagram or someone recommended it","Somewhere I'm a regular — the bartender knows what I drink"]},
+  {id:52, cat:"Social & Entertainment", type:"SCALE", text:"How often do you try a new restaurant versus going back to a place you already like?", low:"I mostly stick to my spots", high:"I'm always trying something new — I keep a running list"},
+  {id:53, cat:"Social & Entertainment", type:"YN", text:"Have you ever made a reservation more than two weeks in advance for a restaurant?"},
+  {id:54, cat:"Social & Entertainment", type:"MC", text:"How do you pick what to watch on a streaming service?", options:["I scroll until something catches my eye","I follow a few shows and watch whatever drops new episodes","I ask friends or check review sites for recommendations","I have multiple streaming services and I subscribe to specific ones for specific shows"]},
+  {id:55, cat:"Social & Entertainment", type:"SCALE", text:"How important is the vibe of a bar or restaurant — lighting, music, decor — versus just the food and drinks?", low:"I honestly don't notice the vibe much", high:"Atmosphere is half the experience for me"},
+  {id:56, cat:"Social & Entertainment", type:"YN", text:"Do you have a go-to date night restaurant?"},
+  {id:57, cat:"Social & Entertainment", type:"MC", text:"A friend invites you to the opera or the symphony. What's your honest reaction?", options:["I'd go and probably enjoy it — why not","I'd go because they asked, but it's not really my thing","I've been before and I liked it — I'd be into it","I'd rather do something else, honestly"]},
+  {id:58, cat:"Social & Entertainment", type:"MC", text:"How do you feel about tipping?", options:["I tip the standard amount and don't think much about it","I usually tip above average — service industry is tough","I tip well at places I go regularly — I want them to know me","I have a system — percentage varies by type of service and I've thought about it"]},
+  {id:59, cat:"Social & Entertainment", type:"SCALE", text:"How often do you listen to podcasts?", low:"Rarely or never", high:"Daily — I have a rotation and I'm usually behind on episodes"},
+  {id:60, cat:"Social & Entertainment", type:"YN", text:"Have you ever recommended a restaurant, bar, or experience to someone and then been nervous they wouldn't like it?"},
+
+  // --- Self-Care & Grooming ---
+  {id:61, cat:"Self-Care & Grooming", type:"MC", text:"What's your haircut situation?", options:["I go to a barber or salon when I need one — whoever's available","I have a person I go to, and I book in advance","Great Clips, Sport Clips, or similar — it's a haircut","I cut my own hair or have someone at home do it"]},
+  {id:62, cat:"Self-Care & Grooming", type:"SCALE", text:"How would you describe your skincare routine?", low:"Soap and water", high:"I have specific products for specific purposes and I use them consistently"},
+  {id:63, cat:"Self-Care & Grooming", type:"YN", text:"Have you ever gotten a professional massage outside of a vacation resort?"},
+  {id:64, cat:"Self-Care & Grooming", type:"MC", text:"How do you buy toiletries — shampoo, body wash, deodorant?", options:["Whatever's on sale or available at the grocery store","I have brands I buy and I repurchase the same things every time","I've tried a lot of stuff and landed on a few specific products I really like","I don't pay much attention — I grab what's there"]},
+  {id:65, cat:"Self-Care & Grooming", type:"SCALE", text:"How often do you go to the dentist?", low:"When something hurts", high:"Twice a year, on schedule, and I've never missed one"},
+  {id:66, cat:"Self-Care & Grooming", type:"YN", text:"Do you have a dermatologist you see regularly (not just for a specific issue)?"},
+  {id:67, cat:"Self-Care & Grooming", type:"MC", text:"How do you feel about spa days?", options:["I've done it a few times and enjoyed it","Not my thing — feels like a waste of time","I go regularly or semi-regularly — it's part of my routine","I'd go if someone set it up, but I'd never book one myself"]},
+  {id:68, cat:"Self-Care & Grooming", type:"SCALE", text:"How much do you care about what your nails look like?", low:"I clip them when they get long — that's it", high:"I keep them maintained and I notice other people's hands too"},
+
+  // --- Fitness & Wellness ---
+  {id:69, cat:"Fitness & Wellness", type:"YN", text:"Do you own a Theragun, Hyperice, or similar recovery device?"},
+  {id:70, cat:"Fitness & Wellness", type:"MC", text:"What's your primary workout situation?", options:["I play golf and stay generally active — that's my fitness","A standard gym membership","A boutique studio or specific program (Orangetheory, CrossFit, a trainer, etc.)","I have a home gym setup that I actually use"]},
+  {id:71, cat:"Fitness & Wellness", type:"SCALE", text:"How would you rate your awareness of what you eat and drink in a typical week?", low:"I eat what sounds good and don't think about it", high:"I track macros, read labels, or follow specific dietary guidelines"},
+  {id:72, cat:"Fitness & Wellness", type:"YN", text:"Have you ever done a structured cleanse, detox, or elimination diet? (Whole30, juice cleanse, etc.)"},
+  {id:73, cat:"Fitness & Wellness", type:"MC", text:"What's your water bottle situation?", options:["I drink from whatever's around — a glass, a disposable bottle","I have a water bottle I use sometimes","I have a specific bottle I bring everywhere — I'd be annoyed if I lost it","I have multiple bottles for different situations (gym, work, golf, travel)"]},
+  {id:74, cat:"Fitness & Wellness", type:"SCALE", text:"How important is sleep to you — not just getting enough, but the quality and setup?", low:"I sleep when I'm tired, wherever I am", high:"I've invested in my sleep setup — mattress, pillows, blackout curtains, maybe a sleep tracker"},
+
+  // --- Tech & Cars ---
+  {id:75, cat:"Tech & Cars", type:"MC", text:"What's in your ears right now (or most often)?", options:["Whatever earbuds came with my phone, or I don't use any","AirPods or Galaxy Buds — the standard wireless ones","Something with noise canceling — I specifically picked it for sound quality","I have different headphones for different situations"]},
+  {id:76, cat:"Tech & Cars", type:"SCALE", text:"How quickly do you upgrade your phone after a new model drops?", low:"When the current one breaks or stops working", high:"Within the first few months, every cycle"},
+  {id:77, cat:"Tech & Cars", type:"MC", text:"What are you driving day-to-day?", options:["Whatever's practical and paid off","A mid-range SUV or truck that I picked for a specific reason","Something I chose because I wanted it, not just because I needed a car","I lease — I like driving something new"]},
+  {id:78, cat:"Tech & Cars", type:"YN", text:'Have you ever described a car\'s interior as "well-appointed"?'},
+  {id:79, cat:"Tech & Cars", type:"MC", text:"How do you feel about your TV setup at home?", options:["It works — I watch stuff on it and that's fine","I have a decent TV and a soundbar","I've put real thought into the picture quality, sound system, or both","I have different setups in different rooms and they're not all the same quality, and that bothers me"]},
+  {id:80, cat:"Tech & Cars", type:"SCALE", text:"How many active subscriptions do you pay for? (Streaming, apps, memberships, delivery services, etc.)", low:"A couple — Netflix and maybe one other", high:"I've lost count and I should probably audit them"},
+
+  // --- Pets ---
+  {id:81, cat:"Pets", type:"MC", text:"If you have a dog, what's the food situation?", options:["A well-known brand from the grocery store or Costco","A premium brand from a pet store","Something specific — I researched it or my vet recommended a particular food","I don't have a dog / N/A"]},
+  {id:82, cat:"Pets", type:"YN", text:'Has your pet ever been to a facility that uses the word "spa," "resort," or "lodge" in its name?'},
+  {id:83, cat:"Pets", type:"SCALE", text:"How much would you estimate you spend on your pet(s) per month, excluding vet visits?", low:"Under $50 — food and basics", high:"$200+ — food, grooming, daycare, treats, toys, the whole operation"},
+  {id:84, cat:"Pets", type:"MC", text:"When you travel, what happens with your pet?", options:["A friend or family member watches them","They go to a boarding place nearby","I have a specific sitter or place I trust — I wouldn't leave them just anywhere","I don't travel without them if I can help it"]},
+  {id:85, cat:"Pets", type:"YN", text:"Does your pet have health insurance?"},
+
+  // --- Sports & Hobbies ---
+  {id:86, cat:"Sports & Hobbies", type:"MC", text:"Do you ski or snowboard?", options:["No","I've been a few times — I go when the opportunity comes up","I go at least once a year and I have a mountain or two I prefer","I go regularly and I have my own gear"]},
+  {id:87, cat:"Sports & Hobbies", type:"SCALE", text:"When you pick up a new hobby or interest, how deep do you go on gear and equipment?", low:"I borrow stuff or buy the basics and see if I stick with it", high:"I research extensively and buy quality stuff from the start — I don't want to buy twice"},
+  {id:88, cat:"Sports & Hobbies", type:"YN", text:"Have you ever taken a lesson for something you do recreationally? (Tennis, cooking, photography, pottery, wine, etc.)"},
+  {id:89, cat:"Sports & Hobbies", type:"MC", text:"How do you feel about watching live sports?", options:["I'll watch at home or at a bar — wherever the game's on","I go to games when I can get tickets","I have season tickets or a ticket package","I don't really follow sports outside of golf"]},
+  {id:90, cat:"Sports & Hobbies", type:"SCALE", text:"How much does the equipment or gear you use for your hobbies matter to you?", low:"I use whatever gets the job done", high:"I have specific brands and models I've chosen for specific reasons"},
+
+  // --- Money & Attitudes ---
+  {id:91, cat:"Money & Attitudes", type:"MC", text:"How do you feel about splitting the check at a group dinner?", options:["Split it evenly — it all comes out in the wash","I prefer to pay for what I ordered, roughly","I usually just grab the whole thing if it's a small group","I don't love splitting — someone should just put it on their card and we'll sort it later"]},
+  {id:92, cat:"Money & Attitudes", type:"SCALE", text:'How strongly do you agree with this statement: "You get what you pay for."', low:"Disagree — plenty of affordable stuff is just as good", high:"Strongly agree — quality costs money and I'm willing to pay for it"},
+  {id:93, cat:"Money & Attitudes", type:"YN", text:'Have you ever used the phrase "treat yourself" to justify a purchase over $200?'},
+  {id:94, cat:"Money & Attitudes", type:"MC", text:"When something you own breaks — let's say a kitchen appliance — what do you do?", options:["Replace it with whatever's available and affordable","Research a replacement and upgrade if the budget allows","Replace it with the exact same one — I already know I like it","I'm annoyed — I thought I bought something that would last"]},
+  {id:95, cat:"Money & Attitudes", type:"SCALE", text:'How much do you think about the "cost per use" of something before you buy it?', low:"Never — I just look at the price tag", high:"All the time — I'll pay more for something I'll use every day"},
+  {id:96, cat:"Money & Attitudes", type:"YN", text:"Do you have a credit card you chose specifically for the rewards or perks?"},
+
+  // --- General Lifestyle & Opinions ---
+  {id:97, cat:"General Lifestyle", type:"MC", text:"How would your friends describe your hosting style when people come over?", options:["Casual — come as you are, I'll figure it out","I'll make sure there's good food and drinks, but it's not a production","I plan the menu, the playlist, maybe a signature drink — I like doing it well","I usually suggest we go somewhere instead of hosting at home"]},
+  {id:98, cat:"General Lifestyle", type:"SCALE", text:"How important is it to you that the things in your daily life — your coffee mug, your wallet, your keychain — are things you specifically chose and like?", low:"I've never thought about this", high:"Very — I notice these things and I've replaced the ones that bothered me"},
+  {id:99, cat:"General Lifestyle", type:"YN", text:"Have you ever recommended a specific product to a friend unprompted — not because they asked, but because you thought they needed to know about it?"},
+  {id:100, cat:"General Lifestyle", type:"MC", text:"Which of these statements sounds most like you?", options:["I'm easy to shop for — I like practical stuff and I'm not picky","I'm hard to shop for — I already have what I want, or I'm very specific about what I like","I'd rather just pick something out myself — I know my taste better than anyone","I genuinely don't care about stuff that much — experiences matter more to me"]}
+];
+
+// ============================================================
+// CATEGORY RULES
+// ============================================================
+const MANDATORY_CATS = [
+  "Food & Drink", "Fashion & Style", "Golf-Adjacent", "Home & Living",
+  "Travel", "Social & Entertainment", "Self-Care & Grooming",
+  "Fitness & Wellness", "Tech & Cars", "Pets", "Sports & Hobbies",
+  "Money & Attitudes", "General Lifestyle"
+];
+const HIGH_SIGNAL_CATS = [
+  "Food & Drink", "Fashion & Style", "Home & Living", "Travel",
+  "Social & Entertainment", "Self-Care & Grooming", "Money & Attitudes"
+];
+const DEPRIORITIZED = "Golf (Specific)";
+
+// ============================================================
+// QUESTION SELECTION
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function selectQuestions() {
+  const selected = [];
+  const usedIds = new Set();
+
+  // Group questions by category
+  const byCat = {};
+  QUESTIONS.forEach(q => {
+    if (!byCat[q.cat]) byCat[q.cat] = [];
+    byCat[q.cat].push(q);
+  });
+
+  // 1. One from each mandatory category
+  for (const cat of MANDATORY_CATS) {
+    if (byCat[cat] && byCat[cat].length > 0) {
+      const pool = shuffle(byCat[cat]);
+      const pick = pool[0];
+      selected.push(pick);
+      usedIds.add(pick.id);
+    }
+  }
+
+  // 2. At most 1 from Golf (Specific) — 50/50 whether we include one
+  if (Math.random() > 0.5 && byCat[DEPRIORITIZED]) {
+    const pool = shuffle(byCat[DEPRIORITIZED]);
+    const pick = pool[0];
+    selected.push(pick);
+    usedIds.add(pick.id);
+  }
+
+  // 3. Fill remaining slots from high-signal categories
+  const remaining = 20 - selected.length;
+  const highSignalPool = shuffle(
+    QUESTIONS.filter(q =>
+      HIGH_SIGNAL_CATS.includes(q.cat) && !usedIds.has(q.id)
+    )
+  );
+
+  for (let i = 0; i < remaining && i < highSignalPool.length; i++) {
+    selected.push(highSignalPool[i]);
+    usedIds.add(highSignalPool[i].id);
+  }
+
+  // 4. Balance question types — try to get roughly even mix
+  // (already handled by random selection across categories)
+
+  return shuffle(selected);
+}
+
+// ============================================================
+// QUIZ STATE
+// ============================================================
+let questions = [];
+let currentIdx = 0;
+let answers = [];
+
+function startQuiz() {
+  questions = selectQuestions();
+  currentIdx = 0;
+  answers = [];
+
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('counter').style.display = 'block';
+  document.getElementById('questionArea').style.display = 'block';
+
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = questions[currentIdx];
+  const area = document.getElementById('questionArea');
+
+  // Update progress
+  const pct = (currentIdx / 20) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('counter').textContent = (currentIdx + 1) + ' of 20';
+
+  let html = '<div class="fade-in">';
+  html += '<div class="question-text">' + escHtml(q.text) + '</div>';
+
+  if (q.type === 'YN') {
+    html += '<div class="yn-row">';
+    html += '<button class="yn-btn" onclick="answer(\'Yes\')">Yes</button>';
+    html += '<button class="yn-btn" onclick="answer(\'No\')">No</button>';
+    html += '</div>';
+  } else if (q.type === 'MC') {
+    html += '<div class="answers">';
+    const letters = ['A', 'B', 'C', 'D'];
+    q.options.forEach((opt, i) => {
+      html += '<button class="answer-btn" onclick="answer(\'' + letters[i] + '\')">'
+        + letters[i] + ') ' + escHtml(opt) + '</button>';
+    });
+    html += '</div>';
+  } else if (q.type === 'SCALE') {
+    html += '<div class="scale-row">';
+    for (let n = 1; n <= 5; n++) {
+      html += '<button class="scale-btn" onclick="answer(\'' + n + '\')">' + n + '</button>';
+    }
+    html += '</div>';
+    html += '<div class="scale-labels">';
+    html += '<div class="scale-label">1 = ' + escHtml(q.low) + '</div>';
+    html += '<div class="scale-label right">5 = ' + escHtml(q.high) + '</div>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+function answer(value) {
+  const q = questions[currentIdx];
+  let displayAnswer = value;
+
+  if (q.type === 'MC') {
+    const letters = ['A', 'B', 'C', 'D'];
+    const idx = letters.indexOf(value);
+    if (idx >= 0 && q.options[idx]) {
+      displayAnswer = value + ') ' + q.options[idx];
+    }
+  }
+
+  answers.push({
+    question: q.text,
+    category: q.cat,
+    type: q.type,
+    answer: displayAnswer
+  });
+
+  currentIdx++;
+
+  if (currentIdx >= 20) {
+    finishQuiz();
+  } else {
+    showQuestion();
+  }
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================================
+// SCORING VIA CLAUDE API
+// ============================================================
+async function finishQuiz() {
+  document.getElementById('questionArea').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('counter').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+
+  // Fill progress bar to 100%
+  document.getElementById('progressBar').style.width = '100%';
+
+  const qaText = answers.map((a, i) =>
+    (i + 1) + '. [' + a.category + '] ' + a.question + '\n   Answer: ' + a.answer
+  ).join('\n\n');
+
+  const systemPrompt = `You are the AmIBougie scoring engine. You've just received the answers from a 20-question interview about someone's lifestyle preferences, habits, and opinions. Your job is to score how bougie they are on a scale of 0 to 100.
+
+SCORING APPROACH (hybrid — informed judgment, not pure math):
+
+For each answer, note where it falls on a bougie spectrum. Bougie-ness is NOT about always picking the most expensive option. It's about having strong opinions, specific preferences, and a personal threshold below which someone would rather opt out entirely. "I'd rather skip it than settle" is a stronger bougie signal than "I always pick the priciest one."
+
+After reviewing all 20 answers, assess these meta-signals:
+- Breadth: Bougie across many categories, or just one area? Breadth increases score significantly.
+- Intensity: Strong opinions? "I'd never" and "I always" are the strongest signals.
+- Consistency: Do their answers tell a coherent story of an elevated lifestyle?
+- "Never/Always" signals: Absolute statements reveal identity, not just behavior.
+
+SCORING RANGES:
+0–15: Almost no bougie signals. Aggressively low-maintenance.
+16–30: A few preferences, but mostly practical and unfussy.
+31–45: Some bougie tendencies in one or two categories. Would push back on being called bougie.
+46–60: Solidly bougie in a few areas. Has preferences, knows what they like, willing to spend.
+61–75: Bougie across the board. Strong opinions, consistent brand awareness.
+76–90: Very bougie. Curated lifestyle, committed to it.
+91–100: Peak bougie. Opinions about everything, never met a premium option they didn't prefer.
+
+TIERS:
+0–15: "The Everyman" — You might actually be allergic to luxury.
+16–30: "The Pragmatist" — You appreciate nice things in theory but your wallet runs the show.
+31–45: "Bougie-Curious" — You've got a few tells, but you can still walk into a Kohl's without flinching.
+46–60: "Casual Connoisseur" — You know what you like, you're willing to pay for it, and you've got opinions. Welcome to the club.
+61–75: "Certified Suburbanite" — Your Target runs somehow always include the home decor aisle, and your golf bag costs more than your first car.
+76–90: "Premium Select" — You are living an elevated life and you've stopped pretending otherwise.
+91–100: "Unapologetically Bougie" — You are the person this quiz was designed to find. Your friends already know.
+
+Respond with ONLY valid JSON in this exact format, no other text:
+{"score": <number>, "tier": "<tier name>", "tagline": "<tier tagline>", "roast": "<2-4 sentence personalized roast referencing their specific answers. Be funny but kind. The goal is for them to laugh and say 'okay, fair.' The roast should feel like it could only be written about this specific person.>"}`;
+
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: 'Here are the interview answers:\n\n' + qaText
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error('API error (' + response.status + '): ' + errBody);
+    }
+
+    const data = await response.json();
+    const text = data.content[0].text;
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse scoring response');
+
+    const result = JSON.parse(jsonMatch[0]);
+    showResults(result);
+
+  } catch (err) {
+    const errorEl = document.getElementById('error');
+    errorEl.textContent = 'Something went wrong: ' + err.message;
+    errorEl.style.display = 'block';
+  }
+}
+
+// ============================================================
+// RESULTS
+// ============================================================
+function showResults(result) {
+  document.getElementById('loading').style.display = 'none';
+
+  const resultsEl = document.getElementById('results');
+  document.getElementById('tierName').textContent = result.tier;
+  document.getElementById('scoreNum').textContent = result.score;
+  document.getElementById('tierTagline').textContent = result.tagline;
+  document.getElementById('roast').textContent = result.roast;
+
+  // Build answers review list
+  const reviewEl = document.getElementById('answersReview');
+  let html = '<h3>Your Answers</h3>';
+  answers.forEach((a, i) => {
+    html += '<div class="answer-item">';
+    html += '<div class="aq">' + (i + 1) + '. ' + escHtml(a.question) + '</div>';
+    html += '<div class="aa">' + escHtml(a.answer) + '</div>';
+    html += '</div>';
+  });
+  reviewEl.innerHTML = html;
+
+  resultsEl.style.display = 'block';
+  resultsEl.classList.add('fade-in');
+}
+
+function toggleAnswers() {
+  const reviewEl = document.getElementById('answersReview');
+  const btn = document.querySelector('.answers-btn');
+  if (reviewEl.style.display === 'block') {
+    reviewEl.style.display = 'none';
+    btn.textContent = 'See My Answers';
+  } else {
+    reviewEl.style.display = 'block';
+    btn.textContent = 'Hide My Answers';
+  }
+}
+
+function retake() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('results').classList.remove('fade-in');
+  document.getElementById('answersReview').style.display = 'none';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('intro').style.display = 'block';
+  // Reset answers button text
+  const btn = document.querySelector('.answers-btn');
+  if (btn) btn.textContent = 'See My Answers';
+}
+</script>
+</body>
+</html>
