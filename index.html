@@ -311,6 +311,73 @@
     color: #1a1a1a;
   }
 
+  /* Quit button */
+  .quit-btn {
+    display: block;
+    margin-top: 32px;
+    background: none;
+    border: none;
+    font-size: 13px;
+    color: #bbb;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 4px 0;
+    transition: color 0.15s;
+  }
+  .quit-btn:hover { color: #999; }
+
+  /* Admin: test connection */
+  .admin-link {
+    margin-top: 24px;
+    font-size: 12px;
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .admin-link:hover { color: #aaa; }
+  .admin-panel {
+    display: none;
+    margin-top: 16px;
+  }
+  .admin-input {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1a1a1a;
+    outline: none;
+    width: 140px;
+    text-align: center;
+  }
+  .admin-input:focus { border-color: #999; }
+  .test-btn {
+    display: none;
+    margin-top: 12px;
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .test-btn:hover { border-color: #999; color: #1a1a1a; }
+  .test-btn.success {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #059669;
+    cursor: default;
+  }
+  .test-btn.fail {
+    background: #fff5f5;
+    border-color: #ef4444;
+    color: #b91c1c;
+    cursor: default;
+  }
+
   /* Error */
   .error {
     background: #fff5f5;
@@ -347,6 +414,12 @@
     <h1>AmIBougie?</h1>
     <p>20 quick questions about your preferences, habits, and opinions. At the end, you'll get a score from 0 to 100 and a personalized assessment. There are no wrong answers.</p>
     <button class="btn-primary" onclick="startQuiz()">Let's Go</button>
+    <div style="font-size:11px;color:#ddd;margin-top:32px;">v1.1</div>
+    <div class="admin-link" onclick="showAdminPanel()">test connection</div>
+    <div class="admin-panel" id="adminPanel">
+      <input type="password" class="admin-input" id="adminPass" placeholder="password" onkeyup="checkAdminPass(event)">
+      <button class="test-btn" id="testBtn" onclick="testConnection()">Test API Connection</button>
+    </div>
   </div>
 
   <!-- Question area -->
@@ -649,6 +722,7 @@ function showQuestion() {
     html += '</div>';
   }
 
+  html += '<button class="quit-btn" onclick="retake()">Quit and go back to the start</button>';
   html += '</div>';
   area.innerHTML = html;
 }
@@ -818,11 +892,80 @@ function retake() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('results').classList.remove('fade-in');
   document.getElementById('answersReview').style.display = 'none';
+  document.getElementById('questionArea').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('counter').style.display = 'none';
   document.getElementById('error').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
   document.getElementById('intro').style.display = 'block';
   // Reset answers button text
   const btn = document.querySelector('.answers-btn');
   if (btn) btn.textContent = 'See My Answers';
+}
+
+// ============================================================
+// ADMIN: Test API Connection
+// ============================================================
+function showAdminPanel() {
+  const panel = document.getElementById('adminPanel');
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  if (panel.style.display === 'block') {
+    document.getElementById('adminPass').focus();
+  }
+}
+
+function checkAdminPass(e) {
+  const val = document.getElementById('adminPass').value;
+  const btn = document.getElementById('testBtn');
+  if (val === 'testes') {
+    btn.style.display = 'inline-block';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+async function testConnection() {
+  const btn = document.getElementById('testBtn');
+  btn.textContent = 'Testing...';
+  btn.className = 'test-btn';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 16,
+        messages: [{ role: 'user', content: 'Reply with only the word: ok' }]
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error(response.status + ': ' + errBody);
+    }
+
+    const data = await response.json();
+    if (data.content && data.content[0]) {
+      btn.textContent = 'Connected';
+      btn.className = 'test-btn success';
+    } else {
+      throw new Error('Unexpected response format');
+    }
+  } catch (err) {
+    btn.textContent = 'Failed — ' + err.message.substring(0, 60);
+    btn.className = 'test-btn fail';
+  }
+
+  // Reset after 5 seconds
+  setTimeout(() => {
+    btn.textContent = 'Test API Connection';
+    btn.className = 'test-btn';
+    btn.style.display = 'none';
+    btn.disabled = false;
+    document.getElementById('adminPass').value = '';
+  }, 5000);
 }
 </script>
 </body>
